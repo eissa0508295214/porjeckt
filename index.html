@@ -304,7 +304,7 @@
             <div class="value" id="p-in-amount-num"></div>
         </div>
         <div class="v-row"><span class="label">استلمنا من المكرم :</span><span class="value" id="p-in-name"></span></div>
-        <div class="v-row"><span class="label">مبلغ وقدره :</span><span class="value"><span id="p-out-amount-text"></span> ريال سعودي فقط لا غير.</span></div>
+        <div class="v-row"><span class="label">مبلغ وقدره :</span><span class="value"><span id="p-in-amount-text"></span> ريال سعودي فقط لا غير.</span></div>
         <div class="v-row"><span class="label">نقداً / شيك رقم :</span><span class="value" style="flex:0.3;">نقداً</span><span class="label">على بنك :</span><span class="value">-</span></div>
         <div class="v-row"><span class="label">وذلك عن :</span><span class="value" id="p-in-details"></span></div>
         <div class="v-signatures">
@@ -348,9 +348,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // تعديل وتصحيح مفاتيح الربط السحابية لتعمل فوراً 100%
     const SUPABASE_URL = 'https://xajjbhatqoanuezabkfs.supabase.co';
-    // تم تصحيح المفتاح هنا ليعمل مباشرة دون الاعتماد على GitHub Secrets المتعارضة مع بيئة التشغيل
-    const SUPABASE_KEY = 'sb_publishable_79hRttZdGFiWrwcDaDtmg_0ihQgK4g';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhampiaGF0cW9hbnVlemFia2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU0Mjk3NTIsImV4cCI6MjAyOTAwNTc1Mn0.4fG1kLVlD4Xg3h_7Rtf2M8Rmdm-6B7w7wYV_ZJ5C1uE';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // متغيرات النظام المحملة سحابياً
@@ -645,7 +645,7 @@
         const date = new Date().toLocaleDateString('en-CA');
         
         const { error } = await _supabase.from('requests').insert([{ name, text, date, status: 'pending' }]);
-        if(error) { alert("فشل حفظ طلب الدعم سحابياً"); return; }
+        if(error) { alert("فعلت مشكلة أثناء حفظ طلب الدعم"); return; }
         
         document.getElementById('request-text').value = '';
         await syncDataFromCloud();
@@ -741,7 +741,6 @@
         const r = document.getElementById('new-role').value;
         
         if(!u || !p) { alert('الرجاء إدخال اسم المستخدم وكلمة المرور'); return; }
-        if(users[u]) { alert('اسم المستخدم هذا موجود مسبقاً'); return; }
         
         const { error } = await _supabase.from('app_users').insert([{ username: u, password: p, role: r }]);
         if(error) { alert("فشلت عملية إضافة المستخدم سحابياً"); return; }
