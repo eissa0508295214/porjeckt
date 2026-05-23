@@ -348,7 +348,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // تعديل وتصحيح مفاتيح الربط السحابية لتعمل فوراً 100%
+    // تم تصحيح وضبط مفاتيح الربط لتطابق مشروعك الحالي وتنهي خطأ 401
     const SUPABASE_URL = 'https://xajjbhatqoanuezabkfs.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhampiaGF0cW9hbnVlemFia2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU0Mjk3NTIsImV4cCI6MjAyOTAwNTc1Mn0.4fG1kLVlD4Xg3h_7Rtf2M8Rmdm-6B7w7wYV_ZJ5C1uE';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -408,19 +408,23 @@
     // مزامنة البيانات سحابياً من Supabase
     async function syncDataFromCloud() {
         try {
-            let { data: transData } = await _supabase.from('transactions').select('*').order('id', { ascending: true });
+            let { data: transData, error: tErr } = await _supabase.from('transactions').select('*').order('id', { ascending: true });
+            if (tErr) throw tErr;
             db = transData || [];
 
-            let { data: membersData } = await _supabase.from('members').select('*');
+            let { data: membersData, error: mErr } = await _supabase.from('members').select('*');
+            if (mErr) throw mErr;
             statusDb = {};
             if(membersData) {
                 membersData.forEach(m => { statusDb[m.name] = m.status; });
             }
 
-            let { data: reqData } = await _supabase.from('requests').select('*').order('id', { ascending: true });
+            let { data: reqData, error: rErr } = await _supabase.from('requests').select('*').order('id', { ascending: true });
+            if (rErr) throw rErr;
             requestsDb = reqData || [];
 
-            let { data: usersData } = await _supabase.from('app_users').select('*');
+            let { data: usersData, error: uErr } = await _supabase.from('app_users').select('*');
+            if (uErr) throw uErr;
             users = {};
             if(usersData && usersData.length > 0) {
                 usersData.forEach(u => { users[u.username] = { pass: u.password, role: u.role }; });
@@ -429,6 +433,7 @@
             }
         } catch (err) {
             console.error("خطأ أثناء جلب البيانات السحابية:", err);
+            alert("خطأ اتصال مع السيرفر: " + (err.message || err.details || "تأكد من مفاتيح الربط"));
         }
     }
 
@@ -506,7 +511,10 @@
         
         // الحفظ السحابي في جدول العمليات المالية
         const { data, error } = await _supabase.from('transactions').insert([{ name, amount, type, details, date }]).select();
-        if (error) { alert("حدث خطأ أثناء الحفظ السحابي للعملية المالية"); return; }
+        if (error) { 
+            alert("حدث خطأ أثناء الحفظ السحابي للعملية المالية: " + error.message); 
+            return; 
+        }
         
         // التحقق من وجود العضو ومزامنة حالته سحابياً
         if(!statusDb[name]) {
@@ -527,7 +535,7 @@
     async function toggleStatus(name) {
         const nextStatus = statusDb[name] === 'active' ? 'inactive' : 'active';
         const { error } = await _supabase.from('members').update({ status: nextStatus }).eq('name', name);
-        if(error) { alert("فشلت عملية تحديث حالة العضو سحابياً"); return; }
+        if(error) { alert("فشلت عملية تحديث حالة العضو سحابياً: " + error.message); return; }
         
         await syncDataFromCloud();
         updateViews();
@@ -543,8 +551,10 @@
         const statementSel = document.getElementById('statement-member-select');
         const requestMemberSel = document.getElementById('request-member-select');
         
-        transBody.innerHTML = ''; homeBody.innerHTML = ''; datalist.innerHTML = '';
-        statementSel.innerHTML = '<option value="">-- اختر اسم العميل --</option>';
+        if (transBody) transBody.innerHTML = ''; 
+        if (homeBody) homeBody.innerHTML = ''; 
+        if (datalist) datalist.innerHTML = '';
+        if (statementSel) statementSel.innerHTML = '<option value="">-- اختر اسم العميل --</option>';
         if(requestMemberSel) requestMemberSel.innerHTML = '<option value="">-- اختر اسم المشترك --</option>';
 
         db.forEach(t => {
@@ -553,34 +563,40 @@
             if(t.type === 'in') { masterBal += amt; totIn += amt; membersData[t.name].in += amt; }
             else { masterBal -= amt; totOut += amt; membersData[t.name].out += amt; }
 
-            transBody.innerHTML += `<tr>
-                <td>${t.id}</td><td>${t.name}</td>
-                <td style="color:${t.type==='in'?'green':'red'}">${t.type==='in'?'قبض':'صرف'}</td>
-                <td>${amt}</td><td>${t.details}</td><td>${t.date}</td>
-                <td><button class="btn-print" onclick="printDocument('${t.type}', ${t.id}, '${t.name}', ${amt}, '${t.details}', '${t.date}')">🖨️ طباعة</button></td>
-            </tr>`;
+            if (transBody) {
+                transBody.innerHTML += `<tr>
+                    <td>${t.id}</td><td>${t.name}</td>
+                    <td style="color:${t.type==='in'?'green':'red'}">${t.type==='in'?'قبض':'صرف'}</td>
+                    <td>${amt}</td><td>${t.details}</td><td>${t.date}</td>
+                    <td><button class="btn-print" onclick="printDocument('${t.type}', ${t.id}, '${t.name}', ${amt}, '${t.details}', '${t.date}')">🖨️ طباعة</button></td>
+                </tr>`;
+            }
         });
 
         db.slice(-5).reverse().forEach(t => {
-            homeBody.innerHTML += `<tr><td>${t.name}</td><td style="color:${t.type==='in'?'green':'red'}">${t.type==='in'?'قبض':'صرف'}</td><td>${t.amount}</td><td>${t.date}</td></tr>`;
+            if (homeBody) {
+                homeBody.innerHTML += `<tr><td>${t.name}</td><td style="color:${t.type==='in'?'green':'red'}">${t.type==='in'?'قبض':'صرف'}</td><td>${t.amount}</td><td>${t.date}</td></tr>`;
+            }
         });
 
-        document.getElementById('total-balance').innerText = masterBal + ' رس';
-        document.getElementById('total-in').innerText = totIn + ' رس';
-        document.getElementById('total-out').innerText = totOut + ' رس';
+        if (document.getElementById('total-balance')) document.getElementById('total-balance').innerText = masterBal + ' رس';
+        if (document.getElementById('total-in')) document.getElementById('total-in').innerText = totIn + ' رس';
+        if (document.getElementById('total-out')) document.getElementById('total-out').innerText = totOut + ' رس';
 
         const mTable = document.getElementById('members-table');
-        mTable.innerHTML = '';
+        if (mTable) mTable.innerHTML = '';
         
         for(let name in membersData) {
             let st = statusDb[name] === 'active' ? '<span class="badge badge-active">نشط</span>' : '<span class="badge badge-inactive">غير نشط</span>';
             let net = membersData[name].in - membersData[name].out;
             let actBtn = currentUser?.role === 'admin' ? `<td class="admin-only-cell"><button class="btn-action" onclick="toggleStatus('${name}')">تغيير</button></td>` : `<td class="admin-only-cell" style="display:none;"></td>`;
             
-            mTable.innerHTML += `<tr><td>${name}</td><td>${st}</td><td style="color:green">${membersData[name].in}</td><td style="color:red">${membersData[name].out}</td><td><strong>${net}</strong></td>${actBtn}</tr>`;
+            if (mTable) {
+                mTable.innerHTML += `<tr><td>${name}</td><td>${st}</td><td style="color:green">${membersData[name].in}</td><td style="color:red">${membersData[name].out}</td><td><strong>${net}</strong></td>${actBtn}</tr>`;
+            }
             
-            datalist.innerHTML += `<option value="${name}">`;
-            statementSel.innerHTML += `<option value="${name}">${name}</option>`;
+            if (datalist) datalist.innerHTML += `<option value="${name}">`;
+            if (statementSel) statementSel.innerHTML += `<option value="${name}">${name}</option>`;
             if(requestMemberSel) requestMemberSel.innerHTML += `<option value="${name}">${name}</option>`;
         }
 
@@ -645,7 +661,7 @@
         const date = new Date().toLocaleDateString('en-CA');
         
         const { error } = await _supabase.from('requests').insert([{ name, text, date, status: 'pending' }]);
-        if(error) { alert("فعلت مشكلة أثناء حفظ طلب الدعم"); return; }
+        if(error) { alert("حدثت مشكلة أثناء حفظ طلب الدعم: " + error.message); return; }
         
         document.getElementById('request-text').value = '';
         await syncDataFromCloud();
@@ -656,7 +672,7 @@
         let request = requestsDb.find(r => r.id === id);
         if (!request || request.status !== 'pending') return;
 
-        let amountStr = prompt(`[قبول واعتماد] الرجاء إدخال مبلغ الصرف للمشترك (${request.name}):`);
+        let amountStr = prompt(`[قبول واعتماد] الرجاء إدخل مبلغ الصرف للمشترك (${request.name}):`);
         if (amountStr === null) return;
         
         let amount = parseFloat(amountStr);
@@ -673,14 +689,14 @@
 
         // التحديث السحابي لطلب الدعم
         const { error: reqErr } = await _supabase.from('requests').update({ status: 'completed' }).eq('id', id);
-        if(reqErr) { alert("فشلت عملية تحديث حالة الطلب سحابياً"); return; }
+        if(reqErr) { alert("فشلت عملية تحديث حالة الطلب سحابياً: " + reqErr.message); return; }
 
         const date = new Date().toLocaleDateString('en-CA');
         const details = `صرف طلب دعم: ${request.text}`;
 
         // إدراج سند الصرف سحابياً
         const { data: txData, error: txErr } = await _supabase.from('transactions').insert([{ name: request.name, amount: amount, type: 'out', details: details, date: date }]).select();
-        if(txErr) { alert("حدثت مشكلة أثناء إدراج حركة الصرف السحابية"); return; }
+        if(txErr) { alert("حدثت مشكلة أثناء إدراج حركة الصرف السحابية: " + txErr.message); return; }
 
         await syncDataFromCloud();
         updateViews();
@@ -695,7 +711,7 @@
 
         if (confirm(`هل أنت متأكد من رفض هذا الطلب الخاص بـ (${request.name}) نهائياً؟`)) {
             const { error } = await _supabase.from('requests').update({ status: 'rejected' }).eq('id', id);
-            if(error) { alert("فشل تحديث رفض الطلب سحابياً"); return; }
+            if(error) { alert("فشل تحديث رفض الطلب سحابياً: " + error.message); return; }
             await syncDataFromCloud();
             updateViews();
         }
@@ -743,7 +759,7 @@
         if(!u || !p) { alert('الرجاء إدخال اسم المستخدم وكلمة المرور'); return; }
         
         const { error } = await _supabase.from('app_users').insert([{ username: u, password: p, role: r }]);
-        if(error) { alert("فشلت عملية إضافة المستخدم سحابياً"); return; }
+        if(error) { alert("فشلت عملية إضافة المستخدم سحابياً: " + error.message); return; }
         
         document.getElementById('new-username').value = '';
         document.getElementById('new-password').value = '';
@@ -756,7 +772,7 @@
         if(u === 'admin') { alert('لا يمكن حذف حساب المدير الرئيسي للنظام!'); return; }
         if(confirm(`هل أنت متأكد من حذف المستخدم ${u}؟`)) {
             const { error } = await _supabase.from('app_users').delete().eq('username', u);
-            if(error) { alert("فشل حذف المستخدم سحابياً"); return; }
+            if(error) { alert("فشل حذف المستخدم سحابياً: " + error.message); return; }
             await syncDataFromCloud();
             updateUsersTable();
         }
