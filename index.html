@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صندوق ضمان تكافل</title>
+    <style>
+        :root {
+            --main-bg: #f1f5f9; --sidebar-bg: #1e293b; --sidebar-hover: #334155;
+            --sidebar-active: #0284c7; --panel-bg: #ffffff; --primary-blue: #1e3a8a;
+            --emerald-green: #10b981; --rose-red: #ef4444; --border-light: #e2e8f0;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background-color: var(--main-bg); margin: 0; display: flex; min-height: 100vh; }
+        
+        /* شاشة الدخول */
+        .login-wrapper { display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; background-color: var(--main-bg); }
+        .login-box { background: var(--panel-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .login-box input { width: 100%; margin-bottom: 15px; padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 12px; background: var(--primary-blue); color: white; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* الهيكل الأساسي */
+        .main-container { display: none; width: 100%; flex: 1; }
+        .sidebar { width: 250px; background-color: var(--sidebar-bg); color: white; position: fixed; top: 0; bottom: 0; right: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; text-align: center; font-size: 18px; font-weight: bold; border-bottom: 1px solid #334155; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; flex: 1; }
+        .sidebar-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #334155; color: #cbd5e1; display: flex; gap: 10px; }
+        .sidebar-item:hover, .sidebar-item.active { background-color: var(--sidebar-active); color: white; border-right: 4px solid white; }
+        
+        .content-body { flex: 1; margin-right: 250px; padding: 20px; box-sizing: border-box; }
+        header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        header h1 { margin: 0; font-size: 20px; color: var(--primary-blue); }
+        .logout-btn { background: var(--rose-red); color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+
+        /* التحكم بظهور الصفحات */
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+        
+        /* الإحصائيات */
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border-light); }
+        .card h3 { margin: 0; font-size: 14px; color: #64748b; }
+        .card .amount { font-size: 24px; font-weight: bold; margin-top: 10px; }
+
+        .section-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border-light); }
+        .section-title { margin-top: 0; color: var(--primary-blue); border-bottom: 2px solid var(--main-bg); padding-bottom: 10px; font-size: 18px; }
+        
+        .form-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        input, select, button { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
+        input, select { flex: 1; min-width: 150px; }
+        button { cursor: pointer; font-weight: bold; }
+        .btn-primary { background: var(--primary-blue); color: white; border: none; }
+        .btn-print, .btn-action { background: #0284c7; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+        .btn-success { background: var(--emerald-green); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+        .btn-danger { background: var(--rose-red); color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: right; border-bottom: 1px solid var(--border-light); font-size: 14px; }
+        th { background: var(--main-bg); color: var(--primary-blue); }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .badge-active { background: #d1fae5; color: var(--emerald-green); }
+        .badge-inactive { background: #fee2e2; color: var(--rose-red); }
+        .badge-pending { background: #fef3c7; color: #d97706; }
+
+        /* قوالب الطباعة */
+        .print-area { display: none; direction: rtl; font-family: 'Arial', sans-serif; color: #000; background: #fff; padding: 20px;}
+        .voucher-box { border: 2px solid #000; padding: 20px; margin: 0 auto; max-width: 800px; }
+        .v-header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: flex-start; }
+        .v-title-center { text-align: center; flex: 1; }
+        .v-title-center h2 { margin: 0; font-size: 24px; text-decoration: underline; color: #1e3a8a; }
+        .v-title-center p { margin: 5px 0 0 0; font-size: 14px; color: #1e3a8a; font-weight: bold; }
+        .v-meta-side { width: 200px; font-size: 14px; font-weight: bold; }
+        .v-meta-side .meta-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        
+        .v-amount-box { border: 1px solid #000; display: inline-flex; margin-bottom: 20px; }
+        .v-amount-box .currency { background: #f0f0f0; padding: 5px 10px; border-left: 1px solid #000; }
+        .v-amount-box .value { padding: 5px 20px; font-weight: bold; min-width: 100px; text-align: center; }
+
+        .v-row { display: flex; align-items: flex-end; margin-bottom: 15px; font-size: 16px; font-weight: bold; }
+        .v-row .label { white-space: nowrap; margin-left: 10px; color: #333; }
+        .v-row .value { flex: 1; border-bottom: 1px dotted #000; padding: 0 10px; min-height: 22px; }
+        
+        .v-signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 16px; font-weight: bold; }
+        .v-signatures div { width: 30%; border-top: 1px dotted #000; padding-top: 5px; text-align: center; }
+
+        /* تنسيق كشف الحساب */
+        .statement-box { margin: 0 auto; max-width: 900px; border: 2px solid #000; padding: 15px; }
+        .s-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+        .s-header h2 { margin: 0; font-size: 22px; text-decoration: underline; }
+        .s-meta { display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; margin-bottom: 15px; }
+        .s-meta div { display: flex; gap: 10px; margin-bottom: 5px; }
+        
+        .s-table { width: 100%; border-collapse: collapse; border: 2px solid #000; }
+        .s-table th, .s-table td { border: 1px solid #000; padding: 8px; text-align: center; font-size: 14px; font-weight: bold; }
+        .s-table th { background-color: #f0f0f0; }
+        
+        .s-footer { margin-top: 15px; font-size: 18px; font-weight: bold; border: 2px solid #000; padding: 10px; width: fit-content; }
+
+        @media print {
+            #login-container, #main-site { display: none !important; }
+            .print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
+            body:not(.print-out) #print-voucher-out { display: none !important; }
+            body:not(.print-in) #print-voucher-in { display: none !important; }
+            body:not(.print-statement) #print-statement { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-wrapper" id="login-container">
+    <div class="login-box">
+        <h2 style="color:var(--primary-blue); margin-top:0;">🔐 ضمان تكافل</h2>
+        <input type="text" id="username" placeholder="اسم المستخدم">
+        <input type="password" id="password" placeholder="كلمة المرور">
+        <button id="btn-login" onclick="checkLogin()">دخول</button>
+    </div>
+</div>
+
+<div class="main-container" id="main-site">
+    <div class="sidebar">
+        <div class="sidebar-header">🛡️ ضمان تكافل</div>
+        <ul class="sidebar-menu">
+            <li class="sidebar-item active" onclick="switchTab('tab-home', this)">🏠 الرئيسية</li>
+            <li class="sidebar-item" onclick="switchTab('tab-transactions', this)">🪙 الاشتراكات والقيود</li>
+            <li class="sidebar-item" onclick="switchTab('tab-members', this)">👥 الأعضاء</li>
+            <li class="sidebar-item" onclick="switchTab('tab-reports', this)">🔍 كشف حساب</li>
+            <li class="sidebar-item admin-only" onclick="switchTab('tab-requests', this)">📥 طلبات الدعم</li>
+            <li class="sidebar-item admin-only" onclick="switchTab('tab-users', this)">⚙️ إدارة المستخدمين</li>
+        </ul>
+    </div>
+
+    <div class="content-body">
+        <header>
+            <h1>لوحة تحكم الصندوق</h1>
+            <div style="display:flex; gap:15px; align-items:center;">
+                <span style="font-size:14px; font-weight:bold;">المستخدم: <span id="current-user"></span></span>
+                <button class="logout-btn" onclick="logout()">خروج</button>
+            </div>
+        </header>
+
+        <div id="tab-home" class="page-section active">
+            <div class="dashboard">
+                <div class="card"><h3>💰 الرصيد الحالي للصندوق</h3><div class="amount" id="total-balance" style="color:var(--primary-blue);">0 رس</div></div>
+                <div class="card"><h3>📥 إجمالي الإيداعات</h3><div class="amount" id="total-in" style="color:var(--emerald-green);">0 رس</div></div>
+                <div class="card admin-only-block"><h3>📤 إجمالي المصروفات</h3><div class="amount" id="total-out" style="color:var(--rose-red);">0 رس</div></div>
+            </div>
+            <div class="section-box">
+                <h2 class="section-title">آخر العمليات</h2>
+                <table>
+                    <thead><tr><th>الاسم</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th></tr></thead>
+                    <tbody id="home-history"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-transactions" class="page-section">
+            <div class="section-box">
+                <h2 class="section-title">تسجيل قيد مالي (يتم التنقل بزر Enter)</h2>
+                <div class="form-group">
+                    <input list="members-list" type="text" id="member-name" placeholder="اسم العضو / المستفيد">
+                    <datalist id="members-list"></datalist>
+                    
+                    <input type="number" id="amount" placeholder="المبلغ">
+                    
+                    <select id="type" class="admin-only-select">
+                        <option value="in">سند قبض (إيداع)</option>
+                        <option value="out">سند صرف (سحب)</option>
+                    </select>
+                    
+                    <input type="text" id="details" placeholder="البيان (مثال: اشتراك شهري)">
+                    <button id="btn-save-trans" class="btn-primary" onclick="addTransaction()">حفظ وإصدار السند</button>
+                </div>
+            </div>
+            <div class="section-box">
+                <h2 class="section-title">السجل العام</h2>
+                <table>
+                    <thead><tr><th>رقم السند</th><th>الاسم</th><th>النوع</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th><th>طباعة</th></tr></thead>
+                    <tbody id="transaction-history"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-members" class="page-section">
+            <div class="section-box">
+                <h2 class="section-title">سجل الأعضاء</h2>
+                <table>
+                    <thead><tr><th>الاسم</th><th>الحالة</th><th>إجمالي الإيداع</th><th>إجمالي السحب</th><th>صافي الرصيد</th><th class="admin-only-cell">تغيير الحالة</th></tr></thead>
+                    <tbody id="members-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-reports" class="page-section">
+            <div class="section-box">
+                <h2 class="section-title">إصدار كشف حساب</h2>
+                <div class="form-group">
+                    <select id="statement-member-select"></select>
+                    <button class="btn-primary" onclick="printStatement()">🖨️ طباعة كشف الحساب</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-requests" class="page-section admin-only">
+            <div class="section-box">
+                <h2 class="section-title">رفع طلب دعم لمشترك</h2>
+                <div class="form-group">
+                    <select id="request-member-select"></select>
+                    <input type="text" id="request-text" placeholder="تفاصيل طلب الدعم أو نوع المساعدة">
+                    <button class="btn-primary" onclick="addSupportRequest()">رفع الطلب</button>
+                </div>
+            </div>
+            <div class="section-box">
+                <h2 class="section-title">سجل طلبات الدعم الحالية</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>اسم المشترك</th>
+                            <th>تفاصيل الطلب</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                            <th>القرارات والإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requests-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-users" class="page-section admin-only">
+            <div class="section-box">
+                <h2 class="section-title">إضافة مستخدم جديد للنظام</h2>
+                <div class="form-group">
+                    <input type="text" id="new-username" placeholder="اسم المستخدم الجديد">
+                    <input type="password" id="new-password" placeholder="كلمة المرور">
+                    <select id="new-role">
+                        <option value="user">مستخدم عادي (صلاحيات محدودة)</option>
+                        <option value="admin">مدير النظام (أدمن كامل الصلاحيات)</option>
+                    </select>
+                    <button class="btn-primary" onclick="addNewUser()">إضافة المستخدم</button>
+                </div>
+            </div>
+            <div class="section-box">
+                <h2 class="section-title">المستخدمين المسجلين</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>اسم المستخدم</th>
+                            <th>نوع الصلاحية</th>
+                            <th>إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="print-voucher-out" class="print-area">
+    <div class="voucher-box">
+        <div class="v-header">
+            <div class="v-meta-side"></div>
+            <div class="v-title-center">
+                <h2>سند صرف</h2>
+                <p>PAYMENT VOUCHER</p>
+            </div>
+            <div class="v-meta-side">
+                <div class="meta-row"><span>رقم السند:</span><span id="p-out-id" style="color:red; font-size:18px;"></span></div>
+                <div class="meta-row"><span>التاريخ:</span><span id="p-out-date"></span></div>
+            </div>
+        </div>
+        <div class="v-amount-box">
+            <div class="currency">ريال S.R</div>
+            <div class="value" id="p-out-amount-num"></div>
+        </div>
+        <div class="v-row"><span class="label">يصرف للسيد / السادة :</span><span class="value" id="p-out-name"></span></div>
+        <div class="v-row"><span class="label">مبلغ وقدره :</span><span class="value"><span id="p-out-amount-text"></span> ريال سعودي فقط لا غير.</span></div>
+        <div class="v-row"><span class="label">نقداً / شيك رقم :</span><span class="value" style="flex:0.3;">نقداً</span><span class="label">على بنك :</span><span class="value">-</span></div>
+        <div class="v-row"><span class="label">وذلك مقابل :</span><span class="value" id="p-out-details"></span></div>
+        <div class="v-signatures">
+            <div>المستلم<br>Receiver</div>
+            <div>المحاسب<br>Accountant</div>
+            <div>المدير المالي<br>Manager</div>
+        </div>
+    </div>
+</div>
+
+<div id="print-voucher-in" class="print-area">
+    <div class="voucher-box">
+        <div class="v-header">
+            <div class="v-meta-side"></div>
+            <div class="v-title-center">
+                <h2 style="color:#0284c7;">سند قبض</h2>
+                <p style="color:#0284c7;">RECEIPT VOUCHER</p>
+            </div>
+            <div class="v-meta-side">
+                <div class="meta-row"><span>رقم السند:</span><span id="p-in-id" style="color:red; font-size:18px;"></span></div>
+                <div class="meta-row"><span>التاريخ:</span><span id="p-in-date"></span></div>
+            </div>
+        </div>
+        <div class="v-amount-box">
+            <div class="currency">ريال S.R</div>
+            <div class="value" id="p-in-amount-num"></div>
+        </div>
+        <div class="v-row"><span class="label">استلمنا من المكرم :</span><span class="value" id="p-in-name"></span></div>
+        <div class="v-row"><span class="label">مبلغ وقدره :</span><span class="value"><span id="p-out-amount-text"></span> ريال سعودي فقط لا غير.</span></div>
+        <div class="v-row"><span class="label">نقداً / شيك رقم :</span><span class="value" style="flex:0.3;">نقداً</span><span class="label">على بنك :</span><span class="value">-</span></div>
+        <div class="v-row"><span class="label">وذلك عن :</span><span class="value" id="p-in-details"></span></div>
+        <div class="v-signatures">
+            <div>المستلم<br>Receiver</div>
+            <div>المحاسب<br>Accountant</div>
+            <div>المدير المالي<br>Manager</div>
+        </div>
+    </div>
+</div>
+
+<div id="print-statement" class="print-area">
+    <div class="statement-box">
+        <div class="s-header">
+            <h2>كشف حساب عميل تفصيلي</h2>
+            <div style="margin-top:10px;">التاريخ: <span id="ps-print-date"></span></div>
+        </div>
+        <div class="s-meta">
+            <div><div style="width:100px;">اسم العميل:</div><div style="border-bottom:1px solid #000; min-width:200px;" id="ps-name"></div></div>
+            <div><div style="width:100px;">رقم العميل:</div><div style="border-bottom:1px solid #000; min-width:150px;">مكود تلقائياً</div></div>
+        </div>
+        <div class="s-meta">
+            <div><div style="width:100px;">الفترة من:</div><div style="border-bottom:1px solid #000; min-width:200px;">بداية التعامل</div></div>
+            <div><div style="width:100px;">إلى تاريخ:</div><div style="border-bottom:1px solid #000; min-width:150px;" id="ps-end-date"></div></div>
+        </div>
+        <table class="s-table">
+            <thead>
+                <tr>
+                    <th style="width:10%">رقم السند</th>
+                    <th style="width:15%">التاريخ</th>
+                    <th style="width:15%">نوع العملية</th>
+                    <th style="width:30%">البيان</th>
+                    <th style="width:15%">مدين (عليه)</th>
+                    <th style="width:15%">دائن (له)</th>
+                </tr>
+            </thead>
+            <tbody id="ps-table-body"></tbody>
+        </table>
+        <div class="s-footer">الرصيد النهائي: <span id="ps-final-balance" style="margin-right:15px; color:red;"></span> ريال</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL = 'https://xajjbhatqoanuezabkfs.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhampiaGF0cW9hbnVlemFia2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDAyMjksImV4cCI6MjA5NTExNjIyOX0.kvizGq9t6tYE7aN0K33EGvationwoXTvugYf5bUGPcs';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // متغيرات النظام المحملة سحابياً
+    let db = [];
+    let statusDb = {};
+    let requestsDb = [];
+    let users = {};
+    let currentUser = null;
+
+    window.onload = function() {
+        setupEnterKeyNavigation();
+    };
+
+    function setupEnterKeyNavigation() {
+        document.getElementById('username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('password').focus(); }
+        });
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); checkLogin(); }
+        });
+
+        const transInputs = ['member-name', 'amount', 'type', 'details'];
+        transInputs.forEach((id, index) => {
+            document.getElementById(id).addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (index < transInputs.length - 1) {
+                        document.getElementById(transInputs[index + 1]).focus();
+                    } else {
+                        addTransaction();
+                        document.getElementById('member-name').focus();
+                    }
+                }
+            });
+        });
+
+        document.getElementById('request-member-select').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('request-text').focus(); }
+        });
+        document.getElementById('request-text').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); addSupportRequest(); }
+        });
+
+        document.getElementById('new-username').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('new-password').focus(); }
+        });
+        document.getElementById('new-password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('new-role').focus(); }
+        });
+        document.getElementById('new-role').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); addNewUser(); }
+        });
+    }
+
+    // مزامنة البيانات سحابياً من Supabase
+    async function syncDataFromCloud() {
+        try {
+            let { data: transData } = await _supabase.from('transactions').select('*').order('id', { ascending: true });
+            db = transData || [];
+
+            let { data: membersData } = await _supabase.from('members').select('*');
+            statusDb = {};
+            if(membersData) {
+                membersData.forEach(m => { statusDb[m.name] = m.status; });
+            }
+
+            let { data: reqData } = await _supabase.from('requests').select('*').order('id', { ascending: true });
+            requestsDb = reqData || [];
+
+            let { data: usersData } = await _supabase.from('app_users').select('*');
+            users = {};
+            if(usersData && usersData.length > 0) {
+                usersData.forEach(u => { users[u.username] = { pass: u.password, role: u.role }; });
+            } else {
+                users = { 'admin': { pass: '12345', role: 'admin' } };
+            }
+        } catch (err) {
+            console.error("خطأ أثناء جلب البيانات السحابية:", err);
+        }
+    }
+
+    async function checkLogin() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value.trim();
+        
+        await syncDataFromCloud();
+        
+        if(users[u] && users[u].pass === p) {
+            currentUser = { name: u, role: users[u].role };
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('main-site').style.display = 'flex';
+            document.getElementById('current-user').innerText = currentUser.name;
+            applyPermissions();
+            updateViews();
+        } else {
+            alert('بيانات الدخول غير صحيحة');
+        }
+    }
+
+    function logout() {
+        currentUser = null;
+        document.getElementById('main-site').style.display = 'none';
+        document.getElementById('login-container').style.display = 'flex';
+    }
+
+    function applyPermissions() {
+        const isAdmin = currentUser.role === 'admin';
+        document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? '' : 'none'; });
+        document.querySelectorAll('.admin-only-cell').forEach(el => { el.style.display = isAdmin ? 'table-cell' : 'none'; });
+        document.querySelectorAll('.admin-only-block').forEach(el => { el.style.display = isAdmin ? 'block' : 'none'; });
+        
+        const typeSelect = document.getElementById('type');
+        if(!isAdmin) {
+            typeSelect.innerHTML = '<option value="in">سند قبض (إيداع)</option>';
+        } else {
+            typeSelect.innerHTML = '<option value="in">سند قبض (إيداع)</option><option value="out">سند صرف (سحب)</option>';
+        }
+    }
+
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        el.classList.add('active');
+    }
+
+    function getBoxBalance() {
+        let bal = 0;
+        db.forEach(t => {
+            if(t.type === 'in') bal += Number(t.amount);
+            else bal -= Number(t.amount);
+        });
+        return bal;
+    }
+
+    async function addTransaction() {
+        const name = document.getElementById('member-name').value.trim();
+        const amount = parseFloat(document.getElementById('amount').value);
+        const type = document.getElementById('type').value;
+        const details = document.getElementById('details').value.trim() || '-';
+        
+        if(!name || isNaN(amount) || amount <= 0) { alert('الرجاء إدخال اسم صحيح ومبلغ أكبر من صفر'); return; }
+
+        if (type === 'out') {
+            const currentBalance = getBoxBalance();
+            if (amount > currentBalance) {
+                alert(`عذراً، لا يمكن إتمام العملية. المبلغ المطلوب (${amount} رس) أكبر من الرصيد المتوفر حالياً في الصندوق (${currentBalance} رس).`);
+                return;
+            }
+        }
+
+        const date = new Date().toLocaleDateString('en-CA');
+        
+        // الحفظ السحابي في جدول العمليات المالية
+        const { data, error } = await _supabase.from('transactions').insert([{ name, amount, type, details, date }]).select();
+        if (error) { alert("حدث خطأ أثناء الحفظ السحابي للعملية المالية"); return; }
+        
+        // التحقق من وجود العضو ومزامنة حالته سحابياً
+        if(!statusDb[name]) {
+            await _supabase.from('members').insert([{ name, status: 'active' }]);
+        }
+
+        document.getElementById('member-name').value = ''; 
+        document.getElementById('amount').value = ''; 
+        document.getElementById('details').value = '';
+        
+        await syncDataFromCloud();
+        updateViews();
+        if(data && data[0]) {
+            printDocument(type, data[0].id, name, amount, details, date);
+        }
+    }
+
+    async function toggleStatus(name) {
+        const nextStatus = statusDb[name] === 'active' ? 'inactive' : 'active';
+        const { error } = await _supabase.from('members').update({ status: nextStatus }).eq('name', name);
+        if(error) { alert("فشلت عملية تحديث حالة العضو سحابياً"); return; }
+        
+        await syncDataFromCloud();
+        updateViews();
+    }
+
+    function updateViews() {
+        let masterBal = 0, totIn = 0, totOut = 0;
+        let membersData = {};
+        
+        const transBody = document.getElementById('transaction-history');
+        const homeBody = document.getElementById('home-history');
+        const datalist = document.getElementById('members-list');
+        const statementSel = document.getElementById('statement-member-select');
+        const requestMemberSel = document.getElementById('request-member-select');
+        
+        transBody.innerHTML = ''; homeBody.innerHTML = ''; datalist.innerHTML = '';
+        statementSel.innerHTML = '<option value="">-- اختر اسم العميل --</option>';
+        if(requestMemberSel) requestMemberSel.innerHTML = '<option value="">-- اختر اسم المشترك --</option>';
+
+        db.forEach(t => {
+            if(!membersData[t.name]) membersData[t.name] = { in: 0, out: 0 };
+            const amt = Number(t.amount);
+            if(t.type === 'in') { masterBal += amt; totIn += amt; membersData[t.name].in += amt; }
+            else { masterBal -= amt; totOut += amt; membersData[t.name].out += amt; }
+
+            transBody.innerHTML += `<tr>
+                <td>${t.id}</td><td>${t.name}</td>
+                <td style="color:${t.type==='in'?'green':'red'}">${t.type==='in'?'قبض':'صرف'}</td>
+                <td>${amt}</td><td>${t.details}</td><td>${t.date}</td>
+                <td><button class="btn-print" onclick="printDocument('${t.type}', ${t.id}, '${t.name}', ${amt}, '${t.details}', '${t.date}')">🖨️ طباعة</button></td>
+            </tr>`;
+        });
+
+        db.slice(-5).reverse().forEach(t => {
+            homeBody.innerHTML += `<tr><td>${t.name}</td><td style="color:${t.type==='in'?'green':'red'}">${t.type==='in'?'قبض':'صرف'}</td><td>${t.amount}</td><td>${t.date}</td></tr>`;
+        });
+
+        document.getElementById('total-balance').innerText = masterBal + ' رس';
+        document.getElementById('total-in').innerText = totIn + ' رس';
+        document.getElementById('total-out').innerText = totOut + ' رس';
+
+        const mTable = document.getElementById('members-table');
+        mTable.innerHTML = '';
+        
+        for(let name in membersData) {
+            let st = statusDb[name] === 'active' ? '<span class="badge badge-active">نشط</span>' : '<span class="badge badge-inactive">غير نشط</span>';
+            let net = membersData[name].in - membersData[name].out;
+            let actBtn = currentUser?.role === 'admin' ? `<td class="admin-only-cell"><button class="btn-action" onclick="toggleStatus('${name}')">تغيير</button></td>` : `<td class="admin-only-cell" style="display:none;"></td>`;
+            
+            mTable.innerHTML += `<tr><td>${name}</td><td>${st}</td><td style="color:green">${membersData[name].in}</td><td style="color:red">${membersData[name].out}</td><td><strong>${net}</strong></td>${actBtn}</tr>`;
+            
+            datalist.innerHTML += `<option value="${name}">`;
+            statementSel.innerHTML += `<option value="${name}">${name}</option>`;
+            if(requestMemberSel) requestMemberSel.innerHTML += `<option value="${name}">${name}</option>`;
+        }
+
+        updateRequestsTable();
+        updateUsersTable();
+    }
+
+    function printDocument(type, id, name, amount, details, date) {
+        const prefix = type === 'out' ? 'p-out-' : 'p-in-';
+        document.getElementById(prefix+'id').innerText = id;
+        document.getElementById(prefix+'date').innerText = date;
+        document.getElementById(prefix+'name').innerText = name;
+        document.getElementById(prefix+'amount-num').innerText = amount;
+        document.getElementById(prefix+'amount-text').innerText = amount;
+        document.getElementById(prefix+'details').innerText = details;
+        
+        document.body.className = type === 'out' ? 'print-out' : 'print-in';
+        window.print();
+        document.body.className = '';
+    }
+
+    function printStatement() {
+        const name = document.getElementById('statement-member-select').value;
+        if(!name) { alert('الرجاء اختيار العميل أولاً'); return; }
+        
+        const sBody = document.getElementById('ps-table-body');
+        sBody.innerHTML = '';
+        let balance = 0;
+        
+        db.filter(t => t.name === name).forEach(t => {
+            let debit = t.type === 'out' ? Number(t.amount) : 0;
+            let credit = t.type === 'in' ? Number(t.amount) : 0;
+            balance += (credit - debit);
+            
+            sBody.innerHTML += `<tr>
+                <td>${t.id}</td>
+                <td>${t.date}</td>
+                <td>${t.type==='in'?'سند قبض':'سند صرف'}</td>
+                <td>${t.details}</td>
+                <td style="color:red;">${debit||'-'}</td>
+                <td style="color:green;">${credit||'-'}</td>
+            </tr>`;
+        });
+        
+        const today = new Date().toLocaleDateString('en-CA');
+        document.getElementById('ps-print-date').innerText = today;
+        document.getElementById('ps-end-date').innerText = today;
+        document.getElementById('ps-name').innerText = name;
+        document.getElementById('ps-final-balance').innerText = balance;
+        
+        document.body.className = 'print-statement';
+        window.print();
+        document.body.className = '';
+    }
+
+    async function addSupportRequest() {
+        const name = document.getElementById('request-member-select').value;
+        const text = document.getElementById('request-text').value.trim();
+        
+        if(!name || !text) { alert('الرجاء اختيار مشترك وكتابة تفاصيل الطلب'); return; }
+        
+        const date = new Date().toLocaleDateString('en-CA');
+        
+        const { error } = await _supabase.from('requests').insert([{ name, text, date, status: 'pending' }]);
+        if(error) { alert("فشل حفظ طلب الدعم سحابياً"); return; }
+        
+        document.getElementById('request-text').value = '';
+        await syncDataFromCloud();
+        updateRequestsTable();
+    }
+    
+    async function acceptAndPayRequest(id) {
+        let request = requestsDb.find(r => r.id === id);
+        if (!request || request.status !== 'pending') return;
+
+        let amountStr = prompt(`[قبول واعتماد] الرجاء إدخال مبلغ الصرف للمشترك (${request.name}):`);
+        if (amountStr === null) return;
+        
+        let amount = parseFloat(amountStr);
+        if (isNaN(amount) || amount <= 0) {
+            alert('عذراً، يجب إدخال مبلغ صحيح أكبر من صفر لإتمام عملية الصرف.');
+            return;
+        }
+
+        const currentBalance = getBoxBalance();
+        if (amount > currentBalance) {
+            alert(`عذراً، لا يمكن الاعتماد. المبلغ المطلوب (${amount} رس) أكبر من الرصيد المتوفر في الصندوق (${currentBalance} رس).`);
+            return;
+        }
+
+        // التحديث السحابي لطلب الدعم
+        const { error: reqErr } = await _supabase.from('requests').update({ status: 'completed' }).eq('id', id);
+        if(reqErr) { alert("فشلت عملية تحديث حالة الطلب سحابياً"); return; }
+
+        const date = new Date().toLocaleDateString('en-CA');
+        const details = `صرف طلب دعم: ${request.text}`;
+
+        // إدراج سند الصرف سحابياً
+        const { data: txData, error: txErr } = await _supabase.from('transactions').insert([{ name: request.name, amount: amount, type: 'out', details: details, date: date }]).select();
+        if(txErr) { alert("حدثت مشكلة أثناء إدراج حركة الصرف السحابية"); return; }
+
+        await syncDataFromCloud();
+        updateViews();
+        if(txData && txData[0]) {
+            printDocument('out', txData[0].id, request.name, amount, details, date);
+        }
+    }
+
+    async function rejectRequest(id) {
+        let request = requestsDb.find(r => r.id === id);
+        if (!request || request.status !== 'pending') return;
+
+        if (confirm(`هل أنت متأكد من رفض هذا الطلب الخاص بـ (${request.name}) نهائياً؟`)) {
+            const { error } = await _supabase.from('requests').update({ status: 'rejected' }).eq('id', id);
+            if(error) { alert("فشل تحديث رفض الطلب سحابياً"); return; }
+            await syncDataFromCloud();
+            updateViews();
+        }
+    }
+
+    function updateRequestsTable() {
+        const rBody = document.getElementById('requests-table-body');
+        if(!rBody) return;
+        rBody.innerHTML = '';
+        
+        requestsDb.forEach(r => {
+            let statusBadge = '';
+            let actionContent = '';
+
+            if (r.status === 'pending') {
+                statusBadge = '<span class="badge badge-pending">قيد الانتظار</span>';
+                actionContent = `
+                    <button class="btn-success" onclick="acceptAndPayRequest(${r.id})">✔️ قبول وصرف</button>
+                    <button class="btn-danger" style="margin-right:5px;" onclick="rejectRequest(${r.id})">❌ رفض الطلب</button>
+                `;
+            } else if (r.status === 'completed') {
+                statusBadge = '<span class="badge badge-active">مقبول - تم الصرف</span>';
+                actionContent = '<span style="color:var(--emerald-green); font-weight:bold; font-size:13px;">🔒 تم الصرف وإصدار السند</span>';
+            } else if (r.status === 'rejected') {
+                statusBadge = '<span class="badge badge-inactive">مرفوض</span>';
+                actionContent = '<span style="color:var(--rose-red); font-weight:bold; font-size:13px;">🔒 طلب مرفوض نهائياً</span>';
+            }
+            
+            rBody.innerHTML += `<tr>
+                <td>${r.id}</td>
+                <td>${r.name}</td>
+                <td>${r.text}</td>
+                <td>${r.date}</td>
+                <td>${statusBadge}</td>
+                <td>${actionContent}</td>
+            </tr>`;
+        });
+    }
+
+    async function addNewUser() {
+        const u = document.getElementById('new-username').value.trim();
+        const p = document.getElementById('new-password').value.trim();
+        const r = document.getElementById('new-role').value;
+        
+        if(!u || !p) { alert('الرجاء إدخال اسم المستخدم وكلمة المرور'); return; }
+        if(users[u]) { alert('اسم المستخدم هذا موجود مسبقاً'); return; }
+        
+        const { error } = await _supabase.from('app_users').insert([{ username: u, password: p, role: r }]);
+        if(error) { alert("فشلت عملية إضافة المستخدم سحابياً"); return; }
+        
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-password').value = '';
+        
+        await syncDataFromCloud();
+        updateUsersTable();
+    }
+    
+    async function deleteUser(u) {
+        if(u === 'admin') { alert('لا يمكن حذف حساب المدير الرئيسي للنظام!'); return; }
+        if(confirm(`هل أنت متأكد من حذف المستخدم ${u}؟`)) {
+            const { error } = await _supabase.from('app_users').delete().eq('username', u);
+            if(error) { alert("فشل حذف المستخدم سحابياً"); return; }
+            await syncDataFromCloud();
+            updateUsersTable();
+        }
+    }
+    
+    function updateUsersTable() {
+        const uBody = document.getElementById('users-table-body');
+        if(!uBody) return;
+        uBody.innerHTML = '';
+        
+        for(let u in users) {
+            let roleText = users[u].role === 'admin' ? 'مدير (أدمن)' : 'مستخدم عادي';
+            let actionBtn = u === 'admin' ? '-' : `<button class="logout-btn" style="padding: 3px 8px; font-size:12px;" onclick="deleteUser('${u}')">حذف</button>`;
+            uBody.innerHTML += `<tr>
+                <td>${u}</td>
+                <td>${roleText}</td>
+                <td>${actionBtn}</td>
+            </tr>`;
+        }
+    }
+</script>
+</body>
+</html>
