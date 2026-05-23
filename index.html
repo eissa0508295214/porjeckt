@@ -7,7 +7,7 @@
     <style>
         :root {
             --main-bg: #f1f5f9; --sidebar-bg: #1e293b; --sidebar-hover: #334155;
-            --sidebar-active: #0284c7; --panel-bg: #fffff; --primary-blue: #1e3a8a;
+            --sidebar-active: #0284c7; --panel-bg: #ffffff; --primary-blue: #1e3a8a;
             --emerald-green: #10b981; --rose-red: #ef4444; --border-light: #e2e8f0;
         }
         body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background-color: var(--main-bg); margin: 0; display: flex; min-height: 100vh; }
@@ -349,7 +349,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
     const SUPABASE_URL = 'https://xajjbhatqoanuezabkfs.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhhampiaGF0cW9hbnVlemFia2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDAyMjksImV4cCI6MjA5NTExNjIyOX0.kvizGq9t6tYE7aN0K33EGvationwoXTvugYf5bUGPcs';
+    // تم تصحيح المفتاح هنا ليعمل مباشرة دون الاعتماد على GitHub Secrets المتعارضة مع بيئة التشغيل
+    const SUPABASE_KEY = 'sb_publishable_79hRttZdGFiWrwcDaDtmg_0ihQgK4g';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // متغيرات النظام المحملة سحابياً
